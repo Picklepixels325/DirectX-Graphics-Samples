@@ -63,8 +63,13 @@ namespace SceneArgs
 	{
 		g_pSample->RequestASInitialization(true);
 	}
+
+    void OnASToggleUI(void *agrs) {
+        g_pSample->m_enableUI = !g_pSample->m_enableUI;
+    }
 	function<void(void*)> OnGeometryChange = OnGeometryReinitializationNeeded;
 	function<void(void*)> OnASChange = OnASReinitializationNeeded;
+    function<void(void*)> ToggleUI = OnASToggleUI;
 
 	enum RaytracingMode { FLDXR = 0, FL, DXR };
 	const WCHAR* RaytracingModes[] = { L"FL-DXR", L"FL",L"DXR" };
@@ -85,8 +90,9 @@ namespace SceneArgs
 	IntVar GeometryTesselationFactor(L"Geometry/Tesselation factor", 2, 0, 80, 1, OnGeometryChange, nullptr);
 	IntVar NumGeometriesPerBLAS(L"Geometry/# geometries per BLAS", 1, 1, 1000, 1, OnGeometryChange, nullptr);
 	IntVar NumBLAS(L"Geometry/# BLAS", 1, 1, D3D12RaytracingDynamicGeometry::MaxBLAS, 1, OnASChange, nullptr);
-};
 
+    BoolVar EnableUI(L"Toggle UI", true, ToggleUI, nullptr);
+};
 
 D3D12RaytracingDynamicGeometry::D3D12RaytracingDynamicGeometry(UINT width, UINT height, std::wstring name) :
 	DXSample(width, height, name),

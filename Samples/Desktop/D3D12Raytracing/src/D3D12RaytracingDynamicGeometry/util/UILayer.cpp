@@ -30,7 +30,7 @@ void UILayer::Initialize(ID3D12Device* pDevice, ID3D12CommandQueue* pCommandQueu
     UINT d3d11DeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
     D2D1_FACTORY_OPTIONS d2dFactoryOptions = {};
 
-#if defined(_DEBUG) || defined(DBG)
+#if 0 // defined(_DEBUG) || defined(DBG)
     // Enable the D2D debug layer.
     d2dFactoryOptions.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
 
