@@ -165,6 +165,12 @@
     <FxCompile Include="*Lib.hlsl" />
     <FxCompile Include="*Lib.hlsl" />
     <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="TreeletReorderV2.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AccelerationStructureBuilderFactory.cpp">
@@ -422,9 +428,6 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="TraverseShader.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="TreeletReorderV2.hlsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
