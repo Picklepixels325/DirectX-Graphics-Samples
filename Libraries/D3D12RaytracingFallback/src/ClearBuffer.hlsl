@@ -16,7 +16,12 @@
 void main( uint3 DTid : SV_DispatchThreadID )
 {
     const uint NumberOfInternalNodes = GetNumInternalNodes(Constants.NumberOfElements);
-    if (DTid.x >= NumberOfInternalNodes) return;
+    
+    if (DTid.x < (Constants.NumberOfElements + NumberOfInternalNodes) >> 5) {
+		ReorderBubbleBuffer.Store(DTid.x * SizeOfUINT32, 0);
+    }
 
-    NumTrianglesBuffer.Store(DTid.x * SizeOfUINT32, 0);
+    if (DTid.x < NumberOfInternalNodes) {
+		NumTrianglesBuffer.Store(DTid.x * SizeOfUINT32, 0);
+    }
 }

@@ -3017,6 +3017,10 @@ namespace FallbackLayerUnitTests
             CComPtr<ID3D12Resource> pNodeCountBuffer;
             AssertSucceeded(d3d12Device.CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &nodeCountBufferDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&pNodeCountBuffer)));
 
+            auto bubbleBufferDesc = CD3DX12_RESOURCE_DESC::Buffer((numNodes + numNodes - 1) / 8, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+            CComPtr<ID3D12Resource> pBubbleBuffer;
+            AssertSucceeded(d3d12Device.CreateCommittedResource(&defaultHeapProperties, D3D12_HEAP_FLAG_NONE, &bubbleBufferDesc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&pBubbleBuffer)));
+
             treeletReorder.Optimize(
                 pCommandList,
                 numLeafNodes,
@@ -3024,7 +3028,7 @@ namespace FallbackLayerUnitTests
                 pNodeCountBuffer->GetGPUVirtualAddress(),
                 pAABBBuffer->GetGPUVirtualAddress(),
                 pTriangleBuffer->GetGPUVirtualAddress(),
-                {},
+                pBubbleBuffer->GetGPUVirtualAddress(),
                 flag);
 
             pCommandList->Close();

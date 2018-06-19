@@ -171,6 +171,15 @@
     <FxCompile Include="TreeletReorderV2.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="TreeletReorderV3.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="TreeletComputeAABBs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AccelerationStructureBuilderFactory.cpp">

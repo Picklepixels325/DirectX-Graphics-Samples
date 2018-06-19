@@ -28,6 +28,7 @@ struct InputConstants
 #define NumTrianglesBufferRegister 1
 #define AABBBufferRegister 2
 #define ElementBufferRegister 3
+#define BubbleBufferRegister 4
 
 #define GlobalDescriptorHeapRegister 0
 #define GlobalDescriptorHeapRegisterSpace 1
@@ -40,10 +41,49 @@ globallycoherent RWStructuredBuffer<HierarchyNode> hierarchyBuffer : UAV_REGISTE
 RWByteAddressBuffer NumTrianglesBuffer : UAV_REGISTER(NumTrianglesBufferRegister);
 globallycoherent RWStructuredBuffer<AABB> AABBBuffer : UAV_REGISTER(AABBBufferRegister);
 RWStructuredBuffer<Primitive> InputBuffer : UAV_REGISTER(ElementBufferRegister);
-RWByteAddressBuffer DescriptorHeapBufferTable[] : UAV_REGISTER_SPACE(GlobalDescriptorHeapRegister, GlobalDescriptorHeapRegisterSpace);
+RWByteAddressBuffer ReorderBubbleBuffer : UAV_REGISTER(BubbleBufferRegister);
 
 cbuffer TreeletConstants : CONSTANT_REGISTER(ConstantsRegister)
 {
     InputConstants Constants;
 };
+
+inline void SetBubbleBufferBit(uint nodeIndex)
+{
+	uint dwordByteIndex = ((nodeIndex / 8) / 4) * 4;
+	uint byteIndex = ((nodeIndex % 32) / 8) * 8;
+	uint bitIndex = nodeIndex & 0x7;
+
+	uint previousValue;
+	ReorderBubbleBuffer.InterlockedOr(dwordByteIndex , (1 << bitIndex) << (byteIndex * 8), previousValue);
+}
+
+inline void ClearBubbleBufferBit(uint nodeIndex)
+{
+	uint dwordByteIndex = ((nodeIndex / 8) / 4) * 4;
+	uint byteIndex = ((nodeIndex % 32) / 8) * 8;
+	uint bitIndex = nodeIndex % 8;
+
+	uint previousValue;
+	ReorderBubbleBuffer.InterlockedAnd(dwordByteIndex , ~((1 << bitIndex) << (byteIndex * 8)), previousValue);
+}
+
+inline uint ReadBubbleBuffer(uint readIndex)
+{
+	return ReorderBubbleBuffer.Load(readIndex * SizeOfUINT32);
+}
+
+inline bool BubbleBufferBitSet(uint nodeIndex)
+{
+	uint byteIndex = ((nodeIndex % 32) / 8) * 8;
+	uint bitIndex = nodeIndex & 0x7;
+
+	uint loaded = ReorderBubbleBuffer.Load((nodeIndex / 32) * SizeOfUINT32);
+	uint byteMask = 0xff << byteIndex;
+	uint byte = (loaded & byteMask) >> byteIndex;
+	uint bitMask = 1 << bitIndex;
+	uint bit = (byte & bitMask) >> bitIndex;
+	return bit;
+}
+
 #endif

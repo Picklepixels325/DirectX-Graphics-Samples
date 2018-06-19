@@ -114,6 +114,7 @@ namespace FallbackLayer
                 buffers.outputMetadataBuffer = buffers.outputElementBuffer + GetOffsetFromPrimitivesToPrimitiveMetaData(numElements);
                 buffers.outputSortCacheBuffer = buffers.outputMetadataBuffer + GetOffsetFromPrimitiveMetaDataToSortedIndices(numElements);
                 buffers.outputAABBParentBuffer = buffers.outputSortCacheBuffer + GetOffsetFromSortedIndicesToAABBParents(numElements);
+                buffers.reorderBubbleBuffer = scratchGpuVA + scratchMemoryPartition.OffsetToBubbleBuffer;
             }
             break;
         }
@@ -208,6 +209,7 @@ namespace FallbackLayer
                 updatesAllowed ? buffers.outputSortCacheBuffer : 0,
                 buffers.hierarchyBuffer,
                 buffers.nodeCountBuffer,
+                buffers.reorderBubbleBuffer,
                 globalDescriptorHeap);
         }
 
@@ -292,6 +294,7 @@ namespace FallbackLayer
         D3D12_GPU_VIRTUAL_ADDRESS outputSortCacheBuffer,
         D3D12_GPU_VIRTUAL_ADDRESS hierarchyBuffer,
         D3D12_GPU_VIRTUAL_ADDRESS nodeCountBuffer,
+        D3D12_GPU_VIRTUAL_ADDRESS reorderBubbleBuffer,
         D3D12_GPU_DESCRIPTOR_HANDLE globalDescriptorHeap) 
     {
         m_mortonCodeCalculator.CalculateMortonCodes(
@@ -339,7 +342,7 @@ namespace FallbackLayer
                 nodeCountBuffer,
                 sceneAABBScratchMemory,
                 outputElementBuffer,
-                globalDescriptorHeap,
+                reorderBubbleBuffer,
                 pDesc->Flags);
         }
     }
@@ -401,7 +404,6 @@ namespace FallbackLayer
             totalSize += extraBufferSize;
         }
 
-
         {
             UINT64 sizeNeededForAABBCalculation = 0;
             scratchMemoryPartitions.OffsetToCalculateAABBDispatchArgs = sizeNeededForAABBCalculation;
@@ -416,6 +418,13 @@ namespace FallbackLayer
         const UINT64 hierarchySize = ALIGN_GPU_VA_OFFSET(sizeof(HierarchyNode) * totalNumNodes);
         scratchMemoryPartitions.OffsetToHierarchy = totalSize;
         totalSize += hierarchySize;
+
+        if (level == Level::Bottom)
+        {
+            const UINT bubbleBufferSize = ALIGN_GPU_VA_OFFSET(DivideAndRoundUp<UINT>(totalNumNodes, 8));
+            scratchMemoryPartitions.OffsetToBubbleBuffer = totalSize;
+            totalSize += bubbleBufferSize;
+        }
 
         return scratchMemoryPartitions;
     }
