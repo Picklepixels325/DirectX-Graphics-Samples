@@ -2,10 +2,6 @@
   
   
   
-  stdafx.cpp
-  D3D12Context.cpp
   fallbacklayerunittests.cpp
-  Generating Code...
-     Creating library C:\Development\DirectX-Graphics-Samples\Samples\Desktop\D3D12Raytracing\src\x64\Debug\FallbackLayerUnitTests.lib and object C:\Development\DirectX-Graphics-Samples\Samples\Desktop\D3D12Raytracing\src\x64\Debug\FallbackLayerUnitTests.exp
   FallbackLayerUnitTests.vcxproj -> C:\Development\DirectX-Graphics-Samples\Samples\Desktop\D3D12Raytracing\src\x64\Debug\FallbackLayerUnitTests.dll
           1 file(s) copied.
