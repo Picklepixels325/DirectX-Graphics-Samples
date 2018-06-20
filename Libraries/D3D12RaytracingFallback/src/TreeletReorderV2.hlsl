@@ -19,9 +19,6 @@
 
 static const uint rootNodeIndex = 0;
 
-static const uint MaxTreeletSize = 7;
-static const uint numTreeletSplitPermutations = 1 << MaxTreeletSize;
-static const uint numInternalTreeletNodes = MaxTreeletSize - 1;
 static const uint FullPartitionMask = numTreeletSplitPermutations - 1;
 
 static const float CostOfRayBoxIntersection = 1.0;

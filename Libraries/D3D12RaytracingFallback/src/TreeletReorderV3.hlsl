@@ -17,9 +17,6 @@
 #include "TreeletReorderBindings.h"
 #include "RayTracingHelper.hlsli"
 
-static const uint MaxTreeletSize = 7;
-static const uint numTreeletSplitPermutations = 1 << MaxTreeletSize;
-static const uint numInternalTreeletNodes = MaxTreeletSize - 1;
 static const uint FullPartitionMask = numTreeletSplitPermutations - 1;
 
 static const float CostOfRayBoxIntersection = 1.0;
@@ -96,37 +93,29 @@ uint NextBitPermutation(uint bits)
 void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {   
     const uint NumberOfAABBs = GetNumInternalNodes(Constants.NumberOfElements) + Constants.NumberOfElements;
-    uint nodeIndex = NumberOfAABBs + 1;
-    uint _nodeIndex = NumberOfAABBs;
+    const uint MaxNumTreelets = NumberOfAABBs / MaxTreeletSize;
+    const uint ParentBitmapBase = (MaxNumTreelets / 2) + 1;
+
+    uint nodeIndex = ReorderBubbleBuffer.Load((Gid.x + 1) * SizeOfUINT32);
+
+    if (nodeIndex == NumberOfAABBs)
+    {
+        return;
+    }
+
     if (GTid.x == 0) 
     {
-        uint waits = Gid.x;
-        // Start from the leaf nodes and go bottom-up
-        while (_nodeIndex > 0)
+        ReorderBubbleBuffer.Store((Gid.x + 1) * SizeOfUINT32, NumberOfAABBs);
+        uint prevStackTop;
+        ReorderBubbleBuffer.InterlockedAdd(0, -1, prevStackTop);
+
+        if (prevStackTop == 2) // Now it's reset to 1
         {
-            _nodeIndex--;
-            if (BubbleBufferBitSet(_nodeIndex))
+            for (uint i = ParentBitmapBase; i <= MaxNumTreelets; i++)
             {
-                if (waits == 0)
-                {
-                    nodeIndex = _nodeIndex;
-                    break;
-                }
-                else
-                {
-                    waits--;
-                }
+                ReorderBubbleBuffer.Store(i * SizeOfUINT32, 0);
             }
         }
-
-        if (nodeIndex >= NumberOfAABBs)
-        {
-            return;
-        }
-    }
-    else
-    {
-        nodeIndex = 0;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -333,10 +322,17 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
             }
         }
     }
-
+    
     if (GTid.x == 0) 
     {
-        ClearBubbleBufferBit(nodeIndex);
-        SetBubbleBufferBit(hierarchyBuffer[nodeIndex].ParentIndex);
+        uint parentIndex = hierarchyBuffer[nodeIndex].ParentIndex;
+        uint prevBits;
+        ReorderBubbleBuffer.InterlockedOr((ParentBitmapBase + (parentIndex / 32)) * SizeOfUINT32, BIT(parentIndex % 32), prevBits);
+        if ((prevBits & BIT(parentIndex % 32)) == 0) 
+        {
+            uint stackTop;
+            ReorderBubbleBuffer.InterlockedAdd(0, 1, stackTop);
+            ReorderBubbleBuffer.Store(stackTop * SizeOfUINT32, parentIndex);
+        }
     }
 }

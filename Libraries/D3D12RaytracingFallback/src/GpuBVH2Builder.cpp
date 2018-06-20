@@ -332,7 +332,7 @@ namespace FallbackLayer
             hierarchyBuffer,
             globalDescriptorHeap,
             numElements);
-
+        
         if (sceneType == SceneType::Triangles) 
         {
             m_treeletReorder.Optimize(
@@ -342,7 +342,7 @@ namespace FallbackLayer
                 nodeCountBuffer,
                 sceneAABBScratchMemory,
                 outputElementBuffer,
-                reorderBubbleBuffer,
+                indexBuffer,
                 pDesc->Flags);
         }
     }
@@ -418,13 +418,15 @@ namespace FallbackLayer
         const UINT64 hierarchySize = ALIGN_GPU_VA_OFFSET(sizeof(HierarchyNode) * totalNumNodes);
         scratchMemoryPartitions.OffsetToHierarchy = totalSize;
         totalSize += hierarchySize;
-
+        
+        /*
         if (level == Level::Bottom)
         {
-            const UINT bubbleBufferSize = ALIGN_GPU_VA_OFFSET(DivideAndRoundUp<UINT>(totalNumNodes, 8));
-            scratchMemoryPartitions.OffsetToBubbleBuffer = totalSize;
+            const UINT bubbleBufferSize = sizeof(UINT) * TreeletReorder::RequiredSizeForBubbleBuffer(numPrimitives);
+            scratchMemoryPartitions.OffsetToBubbleBuffer = totalSize / 2;
             totalSize += bubbleBufferSize;
         }
+        */
 
         return scratchMemoryPartitions;
     }

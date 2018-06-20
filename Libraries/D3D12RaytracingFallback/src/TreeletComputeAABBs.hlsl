@@ -17,7 +17,7 @@
 #include "TreeletReorderBindings.h"
 #include "RayTracingHelper.hlsli"
 
-static const uint rootNodeIndex = 0;
+static const uint rootNodeIndex = 0; 
 
 AABB ComputeLeafAABB(uint triangleIndex)
 {
@@ -89,8 +89,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
         isLeaf = false;
         if (numTriangles >= Constants.MinTrianglesPerTreelet)
         {
-            SetBubbleBufferBit(nodeIndex);
+            uint stackTop;
+            ReorderBubbleBuffer.InterlockedAdd(0, 1, stackTop);
+            ReorderBubbleBuffer.Store(stackTop * SizeOfUINT32, nodeIndex);
             return;
         }
     } while (true);
 }
+ 

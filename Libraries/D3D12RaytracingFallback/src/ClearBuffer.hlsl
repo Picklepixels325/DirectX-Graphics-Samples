@@ -16,9 +16,11 @@
 void main( uint3 DTid : SV_DispatchThreadID )
 {
     const uint NumberOfInternalNodes = GetNumInternalNodes(Constants.NumberOfElements);
-    
-    if (DTid.x < (Constants.NumberOfElements + NumberOfInternalNodes) >> 5) {
-		ReorderBubbleBuffer.Store(DTid.x * SizeOfUINT32, 0);
+    const uint TotalNumberOfNodes = Constants.NumberOfElements + NumberOfInternalNodes;
+    const uint MaxNumberOfTreelets = TotalNumberOfNodes / MaxTreeletSize;
+
+    if (DTid.x <= MaxNumberOfTreelets) {
+		ReorderBubbleBuffer.Store(DTid.x * SizeOfUINT32, (DTid.x == 0) ? 1 : TotalNumberOfNodes);
     }
 
     if (DTid.x < NumberOfInternalNodes) {

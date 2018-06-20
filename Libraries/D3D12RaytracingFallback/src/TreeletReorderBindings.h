@@ -48,11 +48,16 @@ cbuffer TreeletConstants : CONSTANT_REGISTER(ConstantsRegister)
     InputConstants Constants;
 };
 
+static const uint MaxTreeletSize = 7;
+static const uint numTreeletSplitPermutations = 1 << MaxTreeletSize;
+static const uint numInternalTreeletNodes = MaxTreeletSize - 1;
+
+/*
 inline void SetBubbleBufferBit(uint nodeIndex)
 {
-	uint dwordByteIndex = ((nodeIndex / 8) / 4) * 4;
-	uint byteIndex = ((nodeIndex % 32) / 8) * 8;
-	uint bitIndex = nodeIndex & 0x7;
+	uint dwordByteIndex = (nodeIndex / 32) * 4; // Divide into bytes, align on 4-byte
+	uint byteIndex = ((nodeIndex % 32) / 8); // Find bit within 4-byte, get byte index
+	uint bitIndex = nodeIndex & 0x7; // Fing bit within byte
 
 	uint previousValue;
 	ReorderBubbleBuffer.InterlockedOr(dwordByteIndex , (1 << bitIndex) << (byteIndex * 8), previousValue);
@@ -61,16 +66,43 @@ inline void SetBubbleBufferBit(uint nodeIndex)
 inline void ClearBubbleBufferBit(uint nodeIndex)
 {
 	uint dwordByteIndex = ((nodeIndex / 8) / 4) * 4;
-	uint byteIndex = ((nodeIndex % 32) / 8) * 8;
-	uint bitIndex = nodeIndex % 8;
+	uint byteIndex = ((nodeIndex % 32) / 8);
+	uint bitIndex = nodeIndex & 0x7;
 
 	uint previousValue;
 	ReorderBubbleBuffer.InterlockedAnd(dwordByteIndex , ~((1 << bitIndex) << (byteIndex * 8)), previousValue);
 }
 
-inline uint ReadBubbleBuffer(uint readIndex)
+inline uint NextSetBubbleBufferBit(inout uint readIndex, inout uint waits, out uint status)
 {
-	return ReorderBubbleBuffer.Load(readIndex * SizeOfUINT32);
+	while (readIndex > 0 && waits > 0)
+	{
+		uint loaded = ReorderBubbleBuffer.Load(readIndex * SizeOfUINT32);
+		
+		status = countbits(loaded);
+
+		if (status != 0) 
+		{
+			if (status > waits)
+			{
+				while (waits > 0) {
+					loaded &= (~(1 << firstbithigh(loaded)));
+					waits--;
+				}
+
+				return readIndex * 32 + firstbithigh(loaded); // nodeIndex
+			}
+			else
+			{
+				waits -= status;
+				status = 0;
+			}
+		}
+
+		readIndex--;
+	}
+
+	return 0;
 }
 
 inline bool BubbleBufferBitSet(uint nodeIndex)
@@ -85,5 +117,5 @@ inline bool BubbleBufferBitSet(uint nodeIndex)
 	uint bit = (byte & bitMask) >> bitIndex;
 	return bit;
 }
-
+*/
 #endif

@@ -18,7 +18,6 @@
 #include "RayTracingHelper.hlsli"
 
 static const uint rootNodeIndex = 0;
-static const uint MaxTreeletSize = 7;
 static const float CostOfRayBoxIntersection = 1.0;
 
 float ComputeBoxSurfaceArea(AABB aabb)
