@@ -37,11 +37,12 @@ struct InputConstants
 // These need to be UAVs despite being read-only because the fallback layer only gets a 
 // GPU VA and the API doesn't allow any way to transition that GPU VA from UAV->SRV
 
-globallycoherent RWStructuredBuffer<HierarchyNode> hierarchyBuffer : UAV_REGISTER(HierarchyBufferRegister);
-RWByteAddressBuffer NumTrianglesBuffer : UAV_REGISTER(NumTrianglesBufferRegister);
-globallycoherent RWStructuredBuffer<AABB> AABBBuffer : UAV_REGISTER(AABBBufferRegister);
 RWStructuredBuffer<Primitive> InputBuffer : UAV_REGISTER(ElementBufferRegister);
-RWByteAddressBuffer ReorderBubbleBuffer : UAV_REGISTER(BubbleBufferRegister);
+
+globallycoherent RWByteAddressBuffer NumTrianglesBuffer : UAV_REGISTER(NumTrianglesBufferRegister);
+globallycoherent RWStructuredBuffer<HierarchyNode> hierarchyBuffer : UAV_REGISTER(HierarchyBufferRegister);
+globallycoherent RWStructuredBuffer<AABB> AABBBuffer : UAV_REGISTER(AABBBufferRegister);
+globallycoherent RWByteAddressBuffer ReorderBubbleBuffer : UAV_REGISTER(BubbleBufferRegister);
 
 cbuffer TreeletConstants : CONSTANT_REGISTER(ConstantsRegister)
 {
@@ -51,6 +52,31 @@ cbuffer TreeletConstants : CONSTANT_REGISTER(ConstantsRegister)
 static const uint MaxTreeletSize = 7;
 static const uint numTreeletSplitPermutations = 1 << MaxTreeletSize;
 static const uint numInternalTreeletNodes = MaxTreeletSize - 1;
+static const uint rootNodeIndex = 0; 
+
+// All results of [MaxTreeletSize] choose [i]
+static const uint MaxTreeletSizeChoose[MaxTreeletSize + 1] = { 1, 7, 21, 35, 35, 21, 7, 1 };
+
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*
 inline void SetBubbleBufferBit(uint nodeIndex)
@@ -118,4 +144,3 @@ inline bool BubbleBufferBitSet(uint nodeIndex)
 	return bit;
 }
 */
-#endif

@@ -342,7 +342,7 @@ namespace FallbackLayer
                 nodeCountBuffer,
                 sceneAABBScratchMemory,
                 outputElementBuffer,
-                indexBuffer,
+                reorderBubbleBuffer,
                 pDesc->Flags);
         }
     }
@@ -419,14 +419,14 @@ namespace FallbackLayer
         scratchMemoryPartitions.OffsetToHierarchy = totalSize;
         totalSize += hierarchySize;
         
-        /*
+        
         if (level == Level::Bottom)
         {
             const UINT bubbleBufferSize = sizeof(UINT) * TreeletReorder::RequiredSizeForBubbleBuffer(numPrimitives);
-            scratchMemoryPartitions.OffsetToBubbleBuffer = totalSize / 2;
+            scratchMemoryPartitions.OffsetToBubbleBuffer = totalSize;
             totalSize += bubbleBufferSize;
         }
-        */
+        
 
         return scratchMemoryPartitions;
     }

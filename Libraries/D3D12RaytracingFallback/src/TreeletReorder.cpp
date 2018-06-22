@@ -13,7 +13,8 @@
 #include "CompiledShaders/TreeletReorder.h"
 #include "CompiledShaders/TreeletReorderV2.h"
 #include "CompiledShaders/TreeletComputeAABBs.h"
-#include "CompiledShaders/TreeletReorderV3.h"
+#include "CompiledShaders/TreeletReorderWave.h"
+#include "CompiledShaders/TreeletReorderThread.h"
 #include "TreeletReorderBindings.h"
 
 namespace FallbackLayer
@@ -35,10 +36,13 @@ namespace FallbackLayer
         
         CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletReorder), &m_pPSO);
         CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletReorderV2), &m_pPSO_OPT);
-        CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletReorderV3), &m_pPSO_OPT_PL);
+        CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletReorderWave), &m_pPSO_OPT_PL);
+        CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletReorderThread), &m_pPSO_OPT_T);
         CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pTreeletComputeAABBs), &m_pComputeAABBsPSO);
         CreatePSOHelper(pDevice, nodeMask, m_pRootSignature, COMPILED_SHADER(g_pClearBuffer), &m_pClearBufferPSO);
     }
+
+#define FORCE_PL 1
 
     void TreeletReorder::Optimize(
         ID3D12GraphicsCommandList *pCommandList,
@@ -69,24 +73,8 @@ namespace FallbackLayer
         bool bDefault = (buildFlag & (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD)) == 0;
         bool bPrioritizeTrace = buildFlag & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
         bool bPrioritizeBuild = buildFlag & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
-        
-        #define test 0
 
-        #if test
-        UINT numOptimizationPasses = 1;
-        #else
         UINT numOptimizationPasses = 3;
-        #endif
-            // if (bDefault)
-            // {
-            //     pCommandList->SetPipelineState(m_pPSO);
-            // }
-            // else if (bPrioritizeTrace)
-            // {
-            //     pCommandList->SetPipelineState(m_pPSO_OPT);
-            // }
-            // else if (bPrioritizeBuild)
-            // {       
 
         for (UINT i = 0; i < numOptimizationPasses; i++)
         {
@@ -97,41 +85,51 @@ namespace FallbackLayer
 
             pCommandList->SetComputeRoot32BitConstants(ConstantsSlot, SizeOfInUint32(InputConstants), &constants, 0);
             
-            UINT dispatchWidth;
             auto uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(nullptr);
-
-            dispatchWidth = DivideAndRoundUp<UINT>(numElements, THREAD_GROUP_1D_WIDTH);
+            
+            UINT numGroupsForElements = DivideAndRoundUp<UINT>(numElements, THREAD_GROUP_1D_WIDTH);
 
             pCommandList->SetPipelineState(m_pClearBufferPSO);
-            pCommandList->Dispatch(dispatchWidth, 1, 1);
+            pCommandList->Dispatch(numGroupsForElements, 1, 1);
             pCommandList->ResourceBarrier(1, &uavBarrier);
 
-            // pCommandList->SetPipelineState(m_pComputeAABBsPSO);
-            // pCommandList->Dispatch(dispatchWidth, 1, 1);
-            // pCommandList->ResourceBarrier(1, &uavBarrier);
-
-            // pCommandList->SetPipelineState(m_pPSO_OPT_PL);
-
-            // UINT numLevels = (UINT)(std::ceil(log2((double) numElements)));
-            // UINT treeletsStart = (UINT)(std::ceil(log2((double) constants.MinTrianglesPerTreelet)));
-            // #if test
-            // UINT totalDispatches = 1;
-            // #else
-            // UINT totalDispatches = numLevels - treeletsStart + 1;
-            // #endif
-
-            // for (UINT dispatch = 0; dispatch < totalDispatches; dispatch++)
-            // {
-            //     UINT numTreeletsAtLevel = (numElements / constants.MinTrianglesPerTreelet) / (1 << dispatch);
-            //     dispatchWidth = (UINT) std::max(numTreeletsAtLevel, 1u);
-
-            //     pCommandList->Dispatch(dispatchWidth, 1, 1);
-            //     pCommandList->ResourceBarrier(1, &uavBarrier);        
-            // }
-
-            pCommandList->SetPipelineState(m_pPSO_OPT);
-            pCommandList->Dispatch(dispatchWidth, 1, 1);
-            pCommandList->ResourceBarrier(1, &uavBarrier);
+            if (bDefault)
+            {
+#if FORCE_PL
+                pCommandList->SetPipelineState(m_pComputeAABBsPSO);
+                pCommandList->Dispatch(numGroupsForElements, 1, 1);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+                
+                pCommandList->SetPipelineState(m_pPSO_OPT_T);
+                UINT numTreelets = (UINT) std::max(numElements / constants.MinTrianglesPerTreelet, 1u);
+                uint threadsX = numTreelets % 65535;
+                uint threadsY = ((numTreelets / 65535u) + 1) % 65535u;
+                uint threadsZ = (((numTreelets / 65535u) + 1) / 65535u) + 1;   
+                pCommandList->Dispatch(threadsX, threadsY, threadsZ);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+#else
+                pCommandList->SetPipelineState(m_pPSO);
+                pCommandList->Dispatch(numGroupsForElements, 1, 1);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+#endif
+            } 
+            else if (bPrioritizeTrace)
+            {
+                pCommandList->SetPipelineState(m_pComputeAABBsPSO);
+                pCommandList->Dispatch(numGroupsForElements, 1, 1);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+                
+                pCommandList->SetPipelineState(m_pPSO_OPT_PL);
+                UINT numTreelets = (UINT) std::max(numElements / constants.MinTrianglesPerTreelet, 1u);
+                pCommandList->Dispatch(numTreelets, 1, 1);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+            }
+            else if (bPrioritizeBuild)
+            {
+                pCommandList->SetPipelineState(m_pPSO_OPT);
+                pCommandList->Dispatch(numGroupsForElements, 1, 1);
+                pCommandList->ResourceBarrier(1, &uavBarrier);
+            }
 
             constants.MinTrianglesPerTreelet *= 2;
         }

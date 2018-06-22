@@ -17,8 +17,6 @@
 #include "TreeletReorderBindings.h"
 #include "RayTracingHelper.hlsli"
 
-static const uint rootNodeIndex = 0; 
-
 AABB ComputeLeafAABB(uint triangleIndex)
 {
     uint2 unused;
@@ -72,21 +70,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
         AABBBuffer[nodeIndex] = nodeAABB;
         DeviceMemoryBarrier(); // Ensure AABBs have been written out and are visible to all waves
 
-        if (nodeIndex == rootNodeIndex) return;
-
-        uint parentNodeIndex = hierarchyBuffer[nodeIndex].ParentIndex;
-
-        uint numTrianglesFromOtherNode = 0;
-        NumTrianglesBuffer.InterlockedAdd(parentNodeIndex * SizeOfUINT32, numTriangles, numTrianglesFromOtherNode);
-        if (numTrianglesFromOtherNode == 0)
-        {
-            // Other child hasn't finished calculating yet
-            return;
-        }
-
-        numTriangles = numTrianglesFromOtherNode + numTriangles;
-        nodeIndex = parentNodeIndex;
-        isLeaf = false;
         if (numTriangles >= Constants.MinTrianglesPerTreelet)
         {
             uint stackTop;
@@ -94,6 +77,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
             ReorderBubbleBuffer.Store(stackTop * SizeOfUINT32, nodeIndex);
             return;
         }
+
+        if (nodeIndex == rootNodeIndex) return;
+
+        uint parentNodeIndex = hierarchyBuffer[nodeIndex].ParentIndex;
+
+        uint numTrianglesFromOtherNode = 0;
+        NumTrianglesBuffer.InterlockedAdd(parentNodeIndex * SizeOfUINT32, numTriangles, numTrianglesFromOtherNode);
+
+        // Wait for sibling in tree
+        if (numTrianglesFromOtherNode == 0)
+        {
+            return;
+        }
+
+        numTriangles = numTrianglesFromOtherNode + numTriangles;
+        nodeIndex = parentNodeIndex;
+        isLeaf = false;
+
     } while (true);
 }
  

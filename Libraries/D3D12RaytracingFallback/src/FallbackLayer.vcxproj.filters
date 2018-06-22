@@ -174,10 +174,16 @@
     <FxCompile Include="*Lib.hlsl" />
     <FxCompile Include="*Lib.hlsl" />
     <FxCompile Include="*Lib.hlsl" />
-    <FxCompile Include="TreeletReorderV3.hlsl">
+    <FxCompile Include="TreeletComputeAABBs.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="TreeletComputeAABBs.hlsl">
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="*Lib.hlsl" />
+    <FxCompile Include="TreeletReorderThread.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="TreeletReorderWave.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
